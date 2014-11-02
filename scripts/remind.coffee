@@ -1,5 +1,6 @@
 # Description:
 #   Forgetful? Add reminders
+#   Modified by DakotaNelson to work in Slack and notify whole rooms
 #
 # Dependencies:
 #   None
@@ -8,10 +9,12 @@
 #   None
 #
 # Commands:
-#   hubot remind me in <time> to <action> - Set a reminder in <time> to do an <action> <time> is in the format 1 day, 2 hours, 5 minutes etc. Time segments are optional, as are commas
+#   hubot remind <room> in <time> that <thing> - Set a reminder in <time> that <thing> 
+#     <time> is in the format 1 day, 2 hours, 5 minutes etc. Time segments are optional, as are commas
 #
 # Author:
 #   whitman
+#   modified by DakotaNelson
 
 class Reminders
   constructor: (@robot) ->
@@ -42,7 +45,7 @@ class Reminders
       if @cache.length > 0
         trigger = =>
           reminder = @removeFirst()
-          @robot.reply reminder.msg_envelope, 'you asked me to remind you to ' + reminder.action
+          @robot.send reminder.msg_envelope, 'Hi, everyone! ' + reminder.msg_envelope.user.name + ' asked me to remind you that ' + reminder.action + '.'
           @queue()
         # setTimeout uses a 32-bit INT
         extendTimeout = (timeout, callback) ->
@@ -55,8 +58,10 @@ class Reminders
         extendTimeout @cache[0].due - now, trigger
 
 class Reminder
-  constructor: (@msg_envelope, @time, @action) ->
+  constructor: (@msg_envelope, @room, @time, @action) ->
     @time.replace(/^\s+|\s+$/g, '')
+    @room = @room.replace(/^\#/g, '') # trim leading hash marks from channel
+    @msg_envelope.reply_to = @room # reply to the room the user has designated
 
     periods =
       weeks:
@@ -91,9 +96,10 @@ module.exports = (robot) ->
 
   reminders = new Reminders robot
 
-  robot.respond /remind me in ((?:(?:\d+) (?:weeks?|days?|hours?|hrs?|minutes?|mins?|seconds?|secs?)[ ,]*(?:and)? +)+)to (.*)/i, (msg) ->
-    time = msg.match[1]
-    action = msg.match[2]
-    reminder = new Reminder msg.envelope, time, action
+  robot.respond /remind (.*?) in ((?:(?:\d+) (?:weeks?|days?|hours?|hrs?|minutes?|mins?|seconds?|secs?)[ ,]*(?:and)? +)+)that (.*)/i, (msg) ->
+    room = msg.match[1]
+    time = msg.match[2]
+    action = msg.match[3]
+    reminder = new Reminder msg.envelope, room, time, action
     reminders.add reminder
-    msg.send 'I\'ll remind you to ' + action + ' on ' + reminder.dueDate()
+    msg.send 'I\'ll remind ' + room + ' that ' + action + ' on ' + reminder.dueDate()
