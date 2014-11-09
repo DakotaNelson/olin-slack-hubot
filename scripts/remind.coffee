@@ -61,7 +61,6 @@ class Reminder
   constructor: (@msg_envelope, @room, @time, @action) ->
     @time.replace(/^\s+|\s+$/g, '')
     @room = @room.replace(/^\#/g, '') # trim leading hash marks from channel
-    @msg_envelope.reply_to = @room # reply to the room the user has designated
 
     periods =
       weeks:
@@ -102,4 +101,4 @@ module.exports = (robot) ->
     action = msg.match[3]
     reminder = new Reminder msg.envelope, room, time, action
     reminders.add reminder
-    msg.send 'I\'ll remind ' + room + ' that ' + action + ' on ' + reminder.dueDate()
+    @robot.send msg.envelope, 'Got it! I\'ll remind ' + room + ' that ' + action + ' on ' + reminder.dueDate()
